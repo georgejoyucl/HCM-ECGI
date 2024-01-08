@@ -1,0 +1,211 @@
+#############
+#This R code summarises the ML analyses reported in the following paper:
+
+#George Joy1,2§ MBBS, Luis R Lopes1,2§ MD, PhD,  Matthew Webber 2,3,4 MBChB, Alessandra M Ardissino2 BSc, James Wilson1,2 MBBS, Fiona Chan2,3,4 MBBS, Iain Pierce1,2,3 PhD, Rebecca K Hughes1,2 MBBS, Konstantinos Moschonas1,2 MBBS, Hunain Shiwani1,2 BMBS, Robert Jamieson5 MSc, Paula P Velazquez1,8 MBBS, Ramya Vijayakumar11 PhD, Erica Dall’Armellina9 MD, PhD, Peter W Macfarlane5 DSc, Charlotte Manisty1,2 MBBS, PhD, Peter Kellman10 PhD, Rhodri H Davies1,2,3 MBBS, PhD, Maite Tome8 MD, PhD, Vladan Koncar6 PhD, Xuyuan Tao6 PhD, Christoph Guger7 PhD, Yoram Rudy11 PhD,  Alun D Hughes2,3 MBBS, PhD, Pier D Lambiase1,2 BM BCh, PhD, James C Moon1,2 MB BCh, MD, Michele Orini2,3* PhD, Gabriella Captur2,3,4* MD, PhD
+§ Joint first author
+* Joint senior author
+
+1.	Barts Heart Centre, Barts Health NHS Trust, London, UK.¬¬
+2.	Institute of Cardiovascular Science, University College London, London, UK.
+3.	Medical Research Council Unit for Lifelong Health and Ageing, University College London, UK.
+4.	Centre for Inherited Heart Muscle Conditions, Department of Cardiology, Royal Free London NHS Foundation Trust London, UK.
+5.	Electrocardiology Section, School of Health and Wellbeing, University of Glasgow, Glasgow, UK.
+6.	École Nationale Supérieure des Arts et Industries Textiles, University of Lille, France.
+7.	G.Tec medical engineering GmbH, Austria. 
+8.	Cardiology Clinical and Academic Group, St Georges University of London & St Georges University Hospitals NHS Foundation Trust, UK
+9.	Biomedical Imaging Sciences Department, Leeds Institute of Cardiovascular and Metabolic Medicine, University of Leeds, UK
+10.	National Heart, Lung, and Blood Institute, National Institutes of Health, DHHS, Bethesda, USA
+11.	Cardiac Bioelectricity and Arrhythmia Center, Washington University, St Louis, USA. 
+
+##########################
+#Require the following R packages 
+
+require(e1071)
+require(HH)
+require(stats)
+require(psych)
+require(Hmisc)
+require(pastecs)
+require(graphics)
+require(ggplot2)
+require(scales)
+require(reshape2)
+require(plyr)
+require(zoo)
+require(reshape)
+require(simecol)
+require(QuantPsyc)
+require(data.table)
+require(car)
+require (lattice)
+require(beeswarm)
+require(ROCR) 
+require(caret)
+require(cutpointr)
+require(fANCOVA)
+require(caTools)
+require(rminer)
+require(pROC)
+
+################################################
+#Cut-points for ECGI biomarkers
+################################################
+cutpoints<- read.csv("~/Documents/PUBLICATIONS/cutpoints.csv",  sep=",", header = TRUE)
+cutpoints=read.table("~/Documents/PUBLICATIONS/cutpoints.csv",  sep=",", header = TRUE)
+status <- as.factor(cutpionts$status)
+
+
+cp <- cutpointr(cutpionts, NDefl_m, status, method = maximize_metric, metric = accuracy, boot_runs = 1000)
+summary(cp)
+plot(cp)
+boot_ci(cp, acc, in_bag = FALSE, alpha = 0.05)
+#
+cp <- cutpointr(cutpionts, AT_Mean, status, method = maximize_metric, metric = accuracy, boot_runs = 1000)
+summary(cp)
+plot(cp)
+boot_ci(cp, acc, in_bag = FALSE, alpha = 0.05)
+#
+cp <- cutpointr(cutpionts, AT_range, status, method = maximize_metric, metric = accuracy, boot_runs = 1000)
+summary(cp)
+plot(cp)
+boot_ci(cp, acc, in_bag = FALSE, alpha = 0.05)
+#
+cp <- cutpointr(cutpionts, ARIc_Mean, status, method = maximize_metric, metric = accuracy, boot_runs = 1000)
+summary(cp)
+plot(cp)
+boot_ci(cp, acc, in_bag = FALSE, alpha = 0.05)
+#
+cp <- cutpointr(cutpionts, ARIc_frid_Range, status, method = maximize_metric, metric = accuracy, boot_runs = 1000)
+summary(cp)
+plot(cp)
+boot_ci(cp, acc, in_bag = FALSE, alpha = 0.05)
+#
+cp <- cutpointr(cutpionts, LocalGrad_AT_Mean, status, method = maximize_metric, metric = accuracy, boot_runs = 1000)
+summary(cp)
+plot(cp)
+boot_ci(cp, acc, in_bag = FALSE, alpha = 0.05)
+#
+cp <- cutpointr(cutpionts, AmpQRS_m, status, method = maximize_metric, metric = accuracy, boot_runs = 1000)
+summary(cp)
+plot(cp)
+boot_ci(cp, acc, in_bag = FALSE, alpha = 0.05)
+#
+cp <- cutpointr(cutpionts, RTc_frid_Mean, status, method = maximize_metric, metric = accuracy, boot_runs = 1000)
+summary(cp)
+plot(cp)
+boot_ci(cp, acc, in_bag = FALSE, alpha = 0.05)
+#
+cp <- cutpointr(cutpionts, RTc_frid_Range, status, method = maximize_metric, metric = accuracy, boot_runs = 1000)
+summary(cp)
+plot(cp)
+boot_ci(cp, acc, in_bag = FALSE, alpha = 0.05)
+#
+cp <- cutpointr(cutpionts, LocalGrad_RTc_frid_Mean, status, method = maximize_metric, metric = accuracy, boot_runs = 1000)
+summary(cp)
+plot(cp)
+boot_ci(cp, acc, in_bag = FALSE, alpha = 0.05)
+#
+cp <- cutpointr(cutpionts, LocalGrad_AT_Max, status, method = maximize_metric, metric = accuracy, boot_runs = 1000)
+summary(cp)
+plot(cp)
+boot_ci(cp, acc, in_bag = FALSE, alpha = 0.05)
+#
+cp <- cutpointr(cutpionts, LocalGrad_RTc_frid_Max, status, method = maximize_metric, metric = accuracy, boot_runs = 1000)
+summary(cp)
+plot(cp)
+boot_ci(cp, acc, in_bag = FALSE, alpha = 0.05)
+#
+
+################################################
+#SVM & Cross-validation for low vs higher-risk/NSVT+ HCM // repeated for subclinical HCM vs controls
+################################################
+dataset<- read.csv("~/Documents/PUBLICATIONS/risk.csv",  sep=",", header = TRUE)
+dataset=read.table("~/Documents/PUBLICATIONS/risk.csv",  sep=",", header = TRUE)
+dataset$status = factor(dataset$status, levels = c(0, 1))
+
+set.seed(123)
+split = sample.split(dataset$status, SplitRatio = 0.75)
+training_set = subset(dataset, split == TRUE)
+test_set = subset(dataset, split == FALSE)
+training_set[-13] = scale(training_set[-13])
+test_set[-13] = scale(test_set[-13])
+classifier = svm(formula = status ~ .,
+                 data = training_set,
+                 type = 'C-classification',
+                 kernel = 'radial', cost=1, gamma=0.6)
+y_pred = predict(classifier, newdata = test_set[-13])
+cm = table(test_set[, 13], y_pred)
+cm
+
+folds = createFolds(training_set$status, k = 10)
+cv = lapply(folds, function(x) { 
+training_fold = training_set[-x, ] 
+  test_fold = training_set[x, ] 
+classifier = svm(formula = status ~ .,
+                   data = training_fold,
+                   type = 'C-classification',
+                   kernel = 'radial', cost=1, gamma=0.6)
+y_pred = predict(classifier, newdata = test_fold[-13])
+  cm = table(test_fold[, 13], y_pred)
+  accuracy = (cm[1,1] + cm[2,2]) / (cm[1,1] + cm[2,2] + cm[1,2] + cm[2,1])
+  return(accuracy)
+})
+accuracy = mean(as.numeric(cv))
+accuracy
+
+
+################################################
+#Method for SVM tuning for low vs higher-risk/NSVT+ HCM model // repeated for the Subclinical vs Control model
+################################################
+dataset<- read.csv("~/Documents/PUBLICATIONS/risk.csv",  sep=",", header = TRUE)
+dataset=read.table("~/Documents/PUBLICATIONS/risk.csv",  sep=",", header = TRUE)
+dataset$status = factor(dataset$status, levels = c(0, 1))
+
+#tuning linear kernel
+set.seed(1)
+tune_out = tune(svm, Purchased~., data = dataset, kernel = "linear",
+                ranges = list(cost = c(0.1,0.2,0.4,0.6,0.8,1,10,100,1000) , gamma = c(0.1,0.2,0.4,0.6,0.8,1,2,3,4)))
+bestmod = tune_out$best.model
+summary(bestmod)
+tune_out$best.parameters
+
+#tuning polynomial kernel
+set.seed(1)
+tune_out = tune(svm, Purchased~., data = dataset, kernel = "polynomial",
+                ranges = list(cost = c(0.1,0.2,0.4,0.6,0.8,1,10,100,1000) , gamma = c(0.1,0.2,0.4,0.6,0.8,1,2,3,4)))
+bestmod = tune_out$best.model
+summary(bestmod)
+tune_out$best.parameters
+
+#tuning sigmoid kernel
+set.seed(1)
+tune_out = tune(svm, Purchased~., data = dataset, kernel = "sigmoid",
+                ranges = list(cost = c(0.1,0.2,0.4,0.6,0.8,1,10,100,1000) , gamma = c(0.1,0.2,0.4,0.6,0.8,1,2,3,4)))
+bestmod = tune_out$best.model
+summary(bestmod)
+tune_out$best.parameters
+
+#tuning radial basis kernel
+set.seed(1)
+tune_out = tune(svm, Purchased~., data = dataset, kernel = "radial",
+                ranges = list(cost = c(0.1,0.2,0.4,0.6,0.8,1,10,100,1000) , gamma = c(0.1,0.2,0.4,0.6,0.8,1,2,3,4)))
+bestmod = tune_out$best.model
+summary(bestmod)
+tune_out$best.parameters
+
+
+################################################
+#Importance of ECGI biomarkers in final model
+################################################
+ecgi<- read.csv("~/Documents/PUBLICATIONS/ecgi.csv",  sep=",", header = TRUE)
+ecgi=read.table("~/Documents/PUBLICATIONS/ecgi.csv",  sep=",", header = TRUE)
+status <- as.factor(ecgi$status)
+ecgi$status <- as.factor(ecgi$status)
+
+
+imp <- fit(status~., data=ecgi, model="svm", kpar=list(sigma=0.10), C=2)
+svm.imp <- Importance(imp, data=ecgi, method="sensv")
+svm.imp
+
+#################################################
+
